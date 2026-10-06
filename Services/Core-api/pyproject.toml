@@ -1,0 +1,27 @@
+[project]
+name = "core-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Dhruv Akbari", email = "ad.dhruvakbari@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "aiosmtplib>=5.1.3",
+    "bcrypt>=5.0.0",
+    "fastapi[standard]>=0.142.2",
+    "psycopg2-binary>=2.9.13",
+    "pydantic-settings>=2.15.0",
+    "pydantic[email]>=2.13.5",
+    "pyjwt>=2.15.1",
+    "sqlmodel>=0.0.47",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+core-api = "core_api:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
