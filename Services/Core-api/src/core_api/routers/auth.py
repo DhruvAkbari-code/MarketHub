@@ -1,5 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends, status, Body
 from sqlmodel import Session
+import uuid
 
 from fastapi.responses import JSONResponse
 
@@ -20,6 +21,10 @@ from core_api.schemas.auth import (
     ForgotPasswordRequest,
     ResetPasswordRequest,
     VendorRegisterRequest,
+    UpdateProfileRequest,
+    ChangePasswordRequest,
+    AddressRequest,
+    AddressResponse,
 )
 from core_api.security import (
     create_verification_token,
@@ -61,11 +66,6 @@ def verify_email(
 def google_auth(payload: GoogleAuthRequest, session: Session = Depends(get_session)):
     access_token, is_new = auth_service.google_login(session, payload.id_token)
     return TokenResponse(access_token=access_token, is_new_user=is_new)
-
-
-@router.get("/me", response_model=UserResponse)
-def me(current_user: User = Depends(get_current_user)):
-    return current_user
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -170,3 +170,76 @@ def register_vendor(
     token = create_verification_token(user.id)
     background_tasks.add_task(send_verification_email, user.email, user.username, token)
     return RegisterResponse(id=user.id, email=user.email, username=user.username)
+
+
+@router.get("/me", response_model=UserResponse)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    payload: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return auth_service.update_profile(session, current_user.id, payload)
+
+
+@router.post("/change-password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    auth_service.change_password(session, current_user.id, payload)
+    return {"message": "Password updated successfully."}
+
+
+@router.get("/addresses", response_model=list[AddressResponse])
+def get_addresses(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return auth_service.list_addresses(session, current_user.id)
+
+
+@router.post(
+    "/addresses",
+    response_model=AddressResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_address(
+    payload: AddressRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return auth_service.create_address(session, current_user.id, payload)
+
+
+@router.put("/addresses/{address_id}", response_model=AddressResponse)
+def edit_address(
+    address_id: uuid.UUID,
+    payload: AddressRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return auth_service.update_address(session, current_user.id, address_id, payload)
+
+
+@router.post("/addresses/{address_id}/default", response_model=AddressResponse)
+def make_default_address(
+    address_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    return auth_service.set_default_address(session, current_user.id, address_id)
+
+
+@router.delete("/addresses/{address_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_address(
+    address_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    auth_service.delete_address(session, current_user.id, address_id)

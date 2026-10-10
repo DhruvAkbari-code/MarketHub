@@ -6,8 +6,13 @@ from enum import Enum
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
-from core_api.models.user import User
-from core_api.schemas.auth import RegisterRequest, VendorRegisterRequest
+from core_api.schemas.auth import (
+    RegisterRequest,
+    VendorRegisterRequest,
+    ChangePasswordRequest,
+    UpdateProfileRequest,
+    AddressRequest,
+)
 from core_api.security import (
     verify_password,
     decode_verification_token,
@@ -15,7 +20,7 @@ from core_api.security import (
     create_access_token,
     decode_password_reset_token,
 )
-from core_api.models.user import Role, User, VendorProfile
+from core_api.models.user import Role, User, VendorProfile, Address
 from core_api.services.google_service import verify_google_id_token
 
 
@@ -216,3 +221,139 @@ def register_vendor(session: Session, data: VendorRegisterRequest) -> User:
     session.commit()
     session.refresh(user)
     return user
+
+
+def update_profile(session: Session, user_id, data: UpdateProfileRequest) -> User:
+    user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    user.username = data.username
+    user.phone = data.phone
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+def change_password(session: Session, user_id, data: ChangePasswordRequest) -> None:
+    user = session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+
+    if not user.password_hash:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "This account uses Google sign-in and has no password to change.",
+        )
+
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Current password is incorrect.",
+        )
+
+    if verify_password(data.new_password, user.password_hash):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "New password must be different from the current one.",
+        )
+
+    user.password_hash = hash_password(data.new_password)
+    session.add(user)
+    session.commit()
+
+
+MAX_ADDRESSES = 10
+
+
+def list_addresses(session: Session, user_id) -> list[Address]:
+    return list(
+        session.exec(
+            select(Address)
+            .where(Address.user_id == user_id)
+            .order_by(Address.is_default.desc(), Address.created_at)
+        ).all()
+    )
+
+
+def _get_own_address(session: Session, user_id, address_id) -> Address:
+    address = session.get(Address, address_id)
+    # same 404 for "missing" and "belongs to someone else"
+    if address is None or address.user_id != user_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Address not found")
+    return address
+
+
+def _clear_default(session: Session, user_id) -> None:
+    for a in list_addresses(session, user_id):
+        if a.is_default:
+            a.is_default = False
+            session.add(a)
+
+
+def create_address(session: Session, user_id, data: AddressRequest) -> Address:
+    existing = list_addresses(session, user_id)
+    if len(existing) >= MAX_ADDRESSES:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"You can save up to {MAX_ADDRESSES} addresses.",
+        )
+
+    make_default = data.is_default or len(existing) == 0
+    if make_default:
+        _clear_default(session, user_id)
+
+    address = Address(
+        user_id=user_id,
+        **data.model_dump(exclude={"is_default"}),
+        is_default=make_default,
+    )
+    session.add(address)
+    session.commit()
+    session.refresh(address)
+    return address
+
+
+def update_address(
+    session: Session, user_id, address_id, data: AddressRequest
+) -> Address:
+    address = _get_own_address(session, user_id, address_id)
+
+    if data.is_default and not address.is_default:
+        _clear_default(session, user_id)
+
+    for field, value in data.model_dump(exclude={"is_default"}).items():
+        setattr(address, field, value)
+    address.is_default = data.is_default or address.is_default
+
+    session.add(address)
+    session.commit()
+    session.refresh(address)
+    return address
+
+
+def set_default_address(session: Session, user_id, address_id) -> Address:
+    address = _get_own_address(session, user_id, address_id)
+    _clear_default(session, user_id)
+    address.is_default = True
+    session.add(address)
+    session.commit()
+    session.refresh(address)
+    return address
+
+
+def delete_address(session: Session, user_id, address_id) -> None:
+    address = _get_own_address(session, user_id, address_id)
+    was_default = address.is_default
+    session.delete(address)
+    session.commit()
+
+    # if the default was deleted, promote the oldest remaining one
+    if was_default:
+        remaining = list_addresses(session, user_id)
+        if remaining:
+            remaining[0].is_default = True
+            session.add(remaining[0])
+            session.commit()
