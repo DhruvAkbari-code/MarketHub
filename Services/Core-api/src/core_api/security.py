@@ -66,3 +66,64 @@ def decode_verification_token(token: str) -> uuid.UUID:
         return uuid.UUID(payload["sub"])
     except (KeyError, ValueError):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid token subject")
+
+
+def decode_access_token(token: str) -> uuid.UUID:
+    """Return the user id from an access token, or raise 401"""
+    try:
+        payload = jwt.decode(
+            token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
+
+    if payload.get("type") != "access":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token type")
+
+    try:
+        return uuid.UUID(payload["sub"])
+    except (KeyError, ValueError):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token subject")
+
+
+def create_password_reset_token(user_id: uuid.UUID) -> str:
+    return _create_token(
+        str(user_id),
+        "password_reset",
+        timedelta(minutes=settings.RESET_TOKEN_EXPIRE_MINUTES),
+    )
+
+
+def decode_password_reset_token(token: str) -> uuid.UUID:
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Password reset link has expired. Request a new one.",
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid password reset link.",
+        )
+
+    if payload.get("type") != "password_reset":
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid token type.",
+        )
+
+    try:
+        return uuid.UUID(payload["sub"])
+    except (KeyError, ValueError, TypeError):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Invalid token subject.",
+        )

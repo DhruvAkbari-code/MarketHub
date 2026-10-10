@@ -44,3 +44,40 @@ async def send_verification_email(to_email: str, username: str, token: str) -> N
         )
     except Exception:
         log.exception("Failed to send verification email to %s", to_email)
+
+
+async def send_password_reset_email(
+    to_email: str,
+    username: str,
+    token: str,
+) -> None:
+    link = f"{settings.FRONTEND_URL}/reset-password" f"?token={token}"
+
+    msg = EmailMessage()
+    msg["From"] = settings.EMAIL_FROM
+    msg["To"] = to_email
+    msg["Subject"] = "Reset your MarketHub password"
+
+    msg.set_content(
+        f"Hi {username},\n\n"
+        "We received a request to reset your password.\n"
+        f"Open this link to reset it:\n{link}\n\n"
+        f"This link expires in "
+        f"{settings.RESET_TOKEN_EXPIRE_MINUTES} minutes.\n\n"
+        "If you did not request this, you can ignore this email."
+    )
+
+    try:
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.SMTP_HOST,
+            port=settings.SMTP_PORT,
+            username=settings.SMTP_USER or None,
+            password=settings.SMTP_PASSWORD or None,
+            start_tls=settings.SMTP_PORT != 1025,
+        )
+    except Exception:
+        log.exception(
+            "Failed to send password reset email to %s",
+            to_email,
+        )

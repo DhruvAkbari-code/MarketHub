@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AuthLayout from "@/components/AuthLayout";
 import GoogleButton from "@/components/GoogleButton";
 import PasswordInput from "@/components/PasswordInput";
@@ -8,17 +9,48 @@ import { Or, btnPrimary } from "@/components/ui";
 import { inputClass } from "@/components/inputStyles";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "" });
-  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // The login API will be connected in a later step
-    setMessage("Login is not connected to the backend yet.");
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: form.email,
+            password: form.password,
+          }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(
+          typeof data.detail === "string"
+            ? data.detail
+            : data.detail?.[0]?.msg || "Login failed",
+        );
+        return;
+      }
+      localStorage.setItem("access_token", data.access_token);
+      window.dispatchEvent(new Event("auth-change"));
+      router.replace("/");
+    } catch (err) {
+      setError("Cannot reach the server");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -27,8 +59,10 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle="Log in to continue to your Market Hub account."
     >
-      <GoogleButton onClick={() => alert("Google sign-in is coming soon")} />
+      <GoogleButton text="signin_with" onError={setError} />
+
       <Or />
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="email"
@@ -54,15 +88,20 @@ export default function LoginPage() {
             Forgot password?
           </Link>
         </div>
-        {message && (
-          <p className="rounded-lg bg-sky-500/10 px-3 py-2 text-sm text-sky-400">
-            {message}
+        {error && (
+          <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
+            {error}
           </p>
         )}
-        <button type="submit" className={`${btnPrimary} w-full`}>
-          Log in
+        <button
+          type="submit"
+          disabled={loading}
+          className={`${btnPrimary} w-full`}
+        >
+          {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
+
       <p className="mt-6 text-center text-sm text-slate-500">
         New to Market Hub?{" "}
         <Link

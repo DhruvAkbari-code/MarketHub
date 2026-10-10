@@ -1,3 +1,5 @@
+import GuestGuard from "@/components/GuestGuard";
+
 const panels = {
   login: {
     tag: "// welcome_back",
@@ -81,6 +83,8 @@ export default function AuthLayout({
 
   return (
     <main className="flex min-h-[calc(100vh-73px)]">
+      <GuestGuard />
+
       {/* Left side: animations and text */}
       <section className="bg-grid relative hidden flex-1 items-center justify-center overflow-hidden border-r border-slate-800 p-12 lg:flex">
         <div

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     VERIFY_TOKEN_EXPIRE_HOURS: int = 24
+    RESET_TOKEN_EXPIRE_MINUTES: int = 30
 
     EMAIL_BACKEND: str = "smtp"
     SMTP_HOST: str
@@ -18,6 +19,8 @@ class Settings(BaseSettings):
     SMTP_USER: str
     SMTP_PASSWORD: str
     EMAIL_FROM: str
+
+    GOOGLE_CLIENT_ID: str = ""
 
 
 settings = Settings()

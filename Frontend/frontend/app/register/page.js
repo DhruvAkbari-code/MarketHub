@@ -61,8 +61,8 @@ export default function RegisterPage() {
     return (
       <AuthLayout
         variant="register"
-        title="Account created 🎉"
-        subtitle="Welcome to Market Hub. You're ready to go."
+        title="Check your email 📬"
+        subtitle="We sent a verification link to your inbox. Click it to activate your account."
       >
         <Link href="/login" className={`${btnPrimary} block w-full`}>
           Go to login
@@ -77,11 +77,23 @@ export default function RegisterPage() {
       title="Create your account"
       subtitle="Join Market Hub and get the best gear for your setup."
     >
-      <GoogleButton
-        label="Sign up with Google"
-        onClick={() => alert("Google sign-in is coming soon")}
-      />
+      {/* Role switch */}
+      <div className="font-code mb-6 grid grid-cols-2 overflow-hidden rounded-lg border border-slate-700 text-xs">
+        <span className="bg-cyan-400 px-4 py-2.5 text-center font-semibold text-slate-950">
+          Customer
+        </span>
+        <Link
+          href="/become-vendor"
+          className="px-4 py-2.5 text-center text-slate-400 transition hover:text-emerald-400"
+        >
+          Vendor
+        </Link>
+      </div>
+
+      <GoogleButton text="signup_with" onError={setError} />
+
       <Or />
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="text"
@@ -135,6 +147,7 @@ export default function RegisterPage() {
           {loading ? "Creating account..." : "Create account"}
         </button>
       </form>
+
       <p className="mt-6 text-center text-sm text-slate-500">
         Already have an account?{" "}
         <Link

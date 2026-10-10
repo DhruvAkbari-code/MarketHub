@@ -8,11 +8,37 @@ import { inputClass } from "@/components/inputStyles";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // The reset-password API will be connected in a later step
-    setSent(true);
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(
+          typeof data.detail === "string"
+            ? data.detail
+            : data.detail?.[0]?.msg || "Something went wrong",
+        );
+      } else {
+        setSent(true);
+      }
+    } catch (err) {
+      setError("Cannot reach the server");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -23,7 +49,7 @@ export default function ForgotPasswordPage() {
     >
       {sent ? (
         <p className="rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
-          If an account exists for {email}, a reset link is on its way.
+          A reset link has been sent to {email}. Check your inbox.
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -35,8 +61,17 @@ export default function ForgotPasswordPage() {
             required
             className={inputClass}
           />
-          <button type="submit" className={`${btnPrimary} w-full`}>
-            Send reset link
+          {error && (
+            <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className={`${btnPrimary} w-full`}
+          >
+            {loading ? "Sending..." : "Send reset link"}
           </button>
         </form>
       )}

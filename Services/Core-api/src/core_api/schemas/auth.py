@@ -1,6 +1,7 @@
 import uuid
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from core_api.models.user import Role
 
 
 class RegisterRequest(BaseModel):
@@ -26,3 +27,41 @@ class RegisterResponse(BaseModel):
 
 class VerifyEmailRequest(BaseModel):
     token: str = Field(min_length=10)
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str = Field(min_length=20)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    is_new_user: bool = False
+
+
+class UserResponse(BaseModel):
+    id: uuid.UUID
+    email: EmailStr
+    username: str
+    profile_picture: str | None = None
+    email_verified: bool
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=1)
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: Role
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=20)
+    new_password: str = Field(min_length=8, max_length=72)
