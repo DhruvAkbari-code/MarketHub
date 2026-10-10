@@ -19,6 +19,7 @@ from core_api.schemas.auth import (
     LoginResponse,
     ForgotPasswordRequest,
     ResetPasswordRequest,
+    VendorRegisterRequest,
 )
 from core_api.security import (
     create_verification_token,
@@ -153,3 +154,19 @@ def reset_password(
             "Password reset successfully. Please log in " "with your new password."
         )
     }
+
+
+@router.post(
+    "/register/vendor",
+    response_model=RegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def register_vendor(
+    payload: VendorRegisterRequest,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+):
+    user = auth_service.register_vendor(session, payload)
+    token = create_verification_token(user.id)
+    background_tasks.add_task(send_verification_email, user.email, user.username, token)
+    return RegisterResponse(id=user.id, email=user.email, username=user.username)

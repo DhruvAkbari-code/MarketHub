@@ -65,3 +65,20 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=20)
     new_password: str = Field(min_length=8, max_length=72)
+
+
+class VendorRegisterRequest(BaseModel):
+    email: EmailStr
+    username: str = Field(min_length=3, max_length=30, pattern=r"^[A-Za-z0-9_]+$")
+    password: str = Field(min_length=8, max_length=72)
+    phone: str | None = Field(default=None, pattern=r"^\+?[1-9]\d{7,14}$")
+    # store
+    store_name: str = Field(min_length=2, max_length=100)
+    category: str = Field(min_length=2, max_length=50)
+    website: str | None = Field(default=None, max_length=255)
+    about: str = Field(min_length=10, max_length=1000)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, v: str) -> str:
+        return v.strip().lower()

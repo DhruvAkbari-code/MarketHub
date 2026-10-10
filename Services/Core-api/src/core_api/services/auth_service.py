@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from sqlmodel import Session, select
 
 from core_api.models.user import User
-from core_api.schemas.auth import RegisterRequest
+from core_api.schemas.auth import RegisterRequest, VendorRegisterRequest
 from core_api.security import (
     verify_password,
     decode_verification_token,
@@ -15,7 +15,7 @@ from core_api.security import (
     create_access_token,
     decode_password_reset_token,
 )
-from core_api.models.user import Role
+from core_api.models.user import Role, User, VendorProfile
 from core_api.services.google_service import verify_google_id_token
 
 
@@ -23,9 +23,7 @@ def get_user_by_email(session: Session, email: str) -> User | None:
     return session.exec(select(User).where(User.email == email)).first()
 
 
-def register_user(
-    session: Session, data: RegisterRequest, role: Role = Role.customer
-) -> User:
+def register_user(session: Session, data: RegisterRequest) -> User:
     email = str(data.email).strip().lower()
 
     existing_user = get_user_by_email(session, email)
@@ -50,7 +48,7 @@ def register_user(
         email=data.email,
         username=data.username,
         phone=data.phone,
-        role=role,
+        role=Role.customer,
         password_hash=hash_password(data.password),
         email_verified=False,
     )
@@ -181,3 +179,40 @@ def reset_user_password(
 
     session.add(user)
     session.commit()
+
+
+def register_vendor(session: Session, data: VendorRegisterRequest) -> User:
+    email = str(data.email).strip().lower()
+
+    existing_user = get_user_by_email(session, email)
+    if existing_user is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "An account with this email already exists. " "Please sign in instead."
+            ),
+        )
+
+    user = User(
+        email=email,
+        username=data.username,
+        phone=data.phone,
+        role=Role.vendor,
+        password_hash=hash_password(data.password),
+        email_verified=False,
+    )
+    session.add(user)
+    session.flush()
+
+    profile = VendorProfile(
+        user_id=user.id,
+        store_name=data.store_name,
+        category=data.category,
+        website=data.website,
+        about=data.about,
+    )
+    session.add(profile)
+
+    session.commit()
+    session.refresh(user)
+    return user
