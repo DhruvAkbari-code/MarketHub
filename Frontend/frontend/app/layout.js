@@ -2,6 +2,7 @@ import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import Providers from "../components/Providers";
 
 const bodyFont = Space_Grotesk({ subsets: ["latin"] });
 const codeFont = JetBrains_Mono({
@@ -21,9 +22,11 @@ export default function RootLayout({ children }) {
       <body
         className={`${bodyFont.className} ${codeFont.variable} antialiased`}
       >
-        <Navbar />
-        {children}
-        <Footer />
+        <Providers>
+          <Navbar />
+          {children}
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

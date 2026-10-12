@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import { GoogleLogin } from "@react-oauth/google";
 
 export default function GoogleButton({ text = "continue_with", onError }) {
   const router = useRouter();
@@ -46,19 +46,15 @@ export default function GoogleButton({ text = "continue_with", onError }) {
   return (
     <div ref={boxRef} className="flex w-full justify-center">
       {width > 0 && (
-        <GoogleOAuthProvider
-          clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
-        >
-          <GoogleLogin
-            onSuccess={handleSuccess}
-            onError={() => onError?.("Google sign-in was cancelled or failed")}
-            text={text}
-            theme="filled_black"
-            shape="rectangular"
-            size="large"
-            width={width}
-          />
-        </GoogleOAuthProvider>
+        <GoogleLogin
+          onSuccess={handleSuccess}
+          onError={() => onError?.("Google sign-in was cancelled or failed")}
+          text={text}
+          theme="filled_black"
+          shape="rectangular"
+          size="large"
+          width={width}
+        />
       )}
     </div>
   );
