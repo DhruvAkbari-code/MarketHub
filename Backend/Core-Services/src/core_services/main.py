@@ -12,6 +12,8 @@ from core_services.database import close_db, engine
 from core_services.models.user import User
 from core_services.models.vendor import VendorProfile
 from core_services.models.address import Address
+from core_services.models.category import Category
+from core_services.mongo import init_mongo, close_mongo
 
 
 @asynccontextmanager
@@ -20,9 +22,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
+    await init_mongo()
+
     try:
         yield
     finally:
+        await close_mongo()
         await close_db()
 
 

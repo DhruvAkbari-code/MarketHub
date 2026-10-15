@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     # Database
     POSTGRES_DATABASE_URL: str
 
+    MONGODB_URL: str
+    MONGODB_DB_NAME: str = "markethub"
+
     # Security
     SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
