@@ -11,7 +11,7 @@ from core_services.schemas.category_schema import (
 )
 from core_services.services.category_service import generate_unique_slug
 
-router = APIRouter(prefix="/admin/categories", tags=["Admin"])
+router = APIRouter(prefix="/categories", tags=["Product"])
 
 
 @router.post(

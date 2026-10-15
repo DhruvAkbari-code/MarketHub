@@ -13,6 +13,7 @@ from core_services.models.user import User
 from core_services.models.vendor import VendorProfile
 from core_services.models.address import Address
 from core_services.models.category import Category
+from core_services.models.product import Product
 from core_services.mongo import init_mongo, close_mongo
 
 

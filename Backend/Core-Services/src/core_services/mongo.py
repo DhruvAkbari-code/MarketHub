@@ -3,6 +3,7 @@ from pymongo import AsyncMongoClient
 
 from core_services.config import get_settings
 from core_services.models.category import Category
+from core_services.models.product import Product
 
 settings = get_settings()
 
@@ -14,7 +15,7 @@ async def init_mongo() -> None:
     mongo_client = AsyncMongoClient(settings.MONGODB_URL)
     await init_beanie(
         database=mongo_client[settings.MONGODB_DB_NAME],
-        document_models=[Category],
+        document_models=[Category, Product],
     )
 
 
