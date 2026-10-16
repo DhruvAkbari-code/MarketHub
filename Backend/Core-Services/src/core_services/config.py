@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
 
+    REDIS_URL: str
+
 
 @lru_cache
 def get_settings() -> Settings:
