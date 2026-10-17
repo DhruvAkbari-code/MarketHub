@@ -1,3 +1,4 @@
+from uuid import UUID
 from collections.abc import AsyncIterator
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
@@ -15,19 +16,42 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
+get_db = get_db_session
 SessioDep = Annotated[AsyncSession, Depends(get_db_session)]
 
 
 async def current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(bearer_schema),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_schema),
     session: AsyncSession = Depends(get_db_session),
 ) -> User:
-    user_id = decode_access_token(credentials.credentials)
-    user = await session.get(User, user_id)
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials are required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
+    try:
+        decoded_user_id = decode_access_token(credentials.credentials)
+        user_id = UUID(str(decoded_user_id))
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid access token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = await session.get(User, user_id)
     if user is None or not user.is_active:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found or disabled")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or disabled.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
+
+
+get_current_user = current_user
 
 
 def require_roles(*allowed_roles: Role):

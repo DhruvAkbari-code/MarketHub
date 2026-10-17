@@ -46,6 +46,10 @@ class Settings(BaseSettings):
 
     REDIS_URL: str
 
+    RAZORPAY_KEY_ID: str
+    RAZORPAY_KEY_SECRET: str
+    RAZORPAY_WEBHOOK_SECRET: str
+
 
 @lru_cache
 def get_settings() -> Settings:

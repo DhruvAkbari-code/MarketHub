@@ -1,5 +1,6 @@
+import asyncio
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +16,7 @@ from core_services.models.address import Address
 from core_services.models.category import Category
 from core_services.models.product import Product
 from core_services.mongo import init_mongo, close_mongo
+from core_services.services.delivery_worker import auto_deliver_loop
 
 
 @asynccontextmanager
@@ -26,7 +28,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await init_mongo()
 
     try:
+        delivery_task = asyncio.create_task(auto_deliver_loop())
         yield
+        delivery_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await delivery_task
+
     finally:
         await close_mongo()
         await close_db()
